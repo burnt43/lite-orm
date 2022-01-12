@@ -108,7 +108,28 @@ module LiteOrm
       end
 
       def indexes
-        @manually_defined_indexes
+        @manually_defined_indexes || {}
+      end
+
+      def create_indexes!
+        indexes.each do |index_name, index_attrs|
+          index_command = StringIO.new.tap do |s|
+            s.print('CREATE ')
+            s.print('UNIQUE ') if index_attrs[:unique]
+            s.print('INDEX ')
+            s.print(index_name)
+            s.print(' ON ')
+            s.print(table_name)
+            s.print('(')
+            index_attrs[:columns].each_with_index do |col_name, index|
+              s.print(',') unless index.zero?
+              s.print(col_name)
+            end
+            s.print(');')
+          end.string
+
+          LiteOrm.client.execute(index_command)
+        end
       end
 
       def has_column_defined?(column_name)
