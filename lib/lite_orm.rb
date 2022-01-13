@@ -1,4 +1,5 @@
 require 'fileutils'
+require 'pathname'
 require 'sqlite3'
 
 module LiteOrm
@@ -31,10 +32,13 @@ module LiteOrm
     end
 
     def destroy_database_file!
+      return unless File.exist?(sqlite_database_file)
+
       FileUtils.rm_f(sqlite_database_file)
     end
 
     def ensure_database_file_exists!
+      FileUtils.mkdir_p(Pathname.new(sqlite_database_file).parent.to_s)
       FileUtils.touch(sqlite_database_file)
     end
   end
