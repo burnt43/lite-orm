@@ -70,6 +70,21 @@ module LiteOrm
         @manually_defined_schema || {}
       end
 
+      def convert_from_sqlite(column_name, value)
+        if value
+          case sqlite_column_type(column_name)
+          when 'INT'
+            value
+          when 'TEXT'
+            value
+          else
+            nil
+          end
+        else
+          nil
+        end
+      end
+
       def convert_for_sqlite(column_name, value)
         case sqlite_column_type(column_name)
         when 'INT'
@@ -193,6 +208,14 @@ module LiteOrm
       end
     end
 
+    def delete!
+      if exist_in_database?
+        LiteOrm.client.execute(
+          "DELETE FROM #{self.class.table_name} WHERE #{self.class.primary_key}=#{primary_key_value(as_sqlite: true)};"
+        )
+      end
+    end
+
     # TODO: Make this match method_missing.
     # def respond_to_missing(method_name, include_private)
     # end
@@ -200,10 +223,13 @@ module LiteOrm
     def method_missing(method_name, *args, &block)
       method_name_s = method_name.to_s
       potential_assignment = method_name_s.end_with?('=')
+      potential_sqlite_conversion = method_name_s.end_with?('_as_sqlite')
 
       potential_attribute_name =
         if potential_assignment
-          method_name_s[0..-2]
+          method_name_s.sub(/=\z/, '')
+        elsif potential_sqlite_conversion
+          method_name_s.sub(/_as_sqlite\z/, '')
         else
           method_name_s
         end
@@ -215,7 +241,13 @@ module LiteOrm
           raise "method #{method_name} requires 1 argument; received #{args.size} arguments."
         end
       elsif potential_attribute_name && self.class.has_column_defined?(potential_attribute_name)
-        get_column_attribute(potential_attribute_name)
+        value = get_column_attribute(potential_attribute_name)
+
+        if potential_sqlite_conversion
+          self.class.convert_for_sqlite(potential_attribute_name, value)
+        else
+          value
+        end
       else
         super
       end
@@ -231,8 +263,9 @@ module LiteOrm
       @backend_hash[column_name.to_sym] = value
     end
 
-    def primary_key_value
-      send(self.class.primary_key)
+    def primary_key_value(as_sqlite: false)
+      method_name = as_sqlite ? "#{self.class.primary_key}_as_sqlite" : self.class.primary_key
+      send(method_name)
     end
 
     # NOTE: This doesn't handle the case of changing the primary_key. Suppose
@@ -242,7 +275,7 @@ module LiteOrm
     #   with a different primary key.
     def exist_in_database?
       result = LiteOrm.client.execute(
-        "SELECT COUNT(*) FROM #{self.class.table_name} WHERE #{self.class.primary_key}='#{primary_key_value}';"
+        "SELECT COUNT(*) FROM #{self.class.table_name} WHERE #{self.class.primary_key}=#{primary_key_value(as_sqlite: true)};"
       )
       count = result.dig(0,0)
 
@@ -319,9 +352,13 @@ module LiteOrm
     end
 
     def set_attributes_from_query_result(*database_row_attributes)
-      @backend_hash.merge!(
-        Hash[self.class.schema.keys.zip(database_row_attributes)]
-      )
+      attribute_values = Hash[
+        self.class.schema.keys.zip(database_row_attributes).map do |attr_name, attr_value|
+          [attr_name, self.class.convert_from_sqlite(attr_name, attr_value)]
+        end
+      ]
+
+      @backend_hash.merge!(attribute_values)
     end
   end
 end

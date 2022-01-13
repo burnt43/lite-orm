@@ -19,6 +19,16 @@ module LiteOrm
       self.table_name = :foos
       self.primary_key = :id
     end
+
+    class Bar < LiteOrm::Base
+      define_column_for_schema :id_string, 'TEXT'
+      define_column_for_schema :age, 'INT'
+
+      define_index :by_id_string, :id, unique: true
+
+      self.table_name = :bars
+      self.primary_key = :id_string
+    end
   end
 end
 

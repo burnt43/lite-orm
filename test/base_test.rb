@@ -108,6 +108,43 @@ module LiteOrm
         assert_equal(100, LiteOrm::Testing::Foo.find_by_name('Joe Blow').id)
         assert_equal('Joe Blow', LiteOrm::Testing::Foo.find_by_name('Joe Blow').name)
       end
+
+      def test_delete!
+        LiteOrm::Testing::Foo.ensure_table_exists!
+
+        foo01 = LiteOrm::Testing::Foo.new.tap do |f|
+          f.id = 100
+          f.name = 'Joe Blow'
+        end
+
+        refute(foo01.send(:exist_in_database?))
+        foo01.save!
+        assert(foo01.send(:exist_in_database?))
+        foo01.delete!
+        refute(foo01.send(:exist_in_database?))
+      end
+
+      def test_primary_key_is_text_type
+        LiteOrm::Testing::Bar.ensure_table_exists!
+
+        bar01 = LiteOrm::Testing::Bar.new.tap do |b|
+          b.id_string = 'id 01'
+          b.age = 54
+        end
+
+        refute(bar01.send(:exist_in_database?))
+        bar01.save!
+        assert(bar01.send(:exist_in_database?))
+        bar01.age = 20
+        bar01.save!
+
+        bar02 = LiteOrm::Testing::Bar.find_by_id_string('id 01')
+        refute_nil(bar02)
+        bar02.delete!
+        refute(bar02.send(:exist_in_database?))
+        refute(bar02.send(:exist_in_database?))
+
+      end
     end
   end
 end
