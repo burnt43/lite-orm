@@ -167,6 +167,10 @@ module LiteOrm
         schema.dig(column_name.to_sym, :type)
       end
 
+      def delete_all!
+        LiteOrm.client.execute("DELETE FROM #{table_name};")
+      end
+
       # TODO: Make this match method_missing.
       # def respond_to_missing(method_name, include_private)
       # end
