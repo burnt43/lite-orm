@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'lite-orm'
-  s.version     = '0.0.4'
+  s.version     = '0.0.5'
   s.summary     = 'lightweight, simple orm for sqlite'
   s.description = 'lightweight, simple orm for sqlite'
   s.authors     = ['James Carson']

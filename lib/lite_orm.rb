@@ -81,6 +81,8 @@ module LiteOrm
             value
           when 'TEXT'
             value
+          when 'TINYINT'
+            value == 1 ? true : false
           else
             nil
           end
@@ -90,11 +92,17 @@ module LiteOrm
       end
 
       def convert_for_sqlite(column_name, value)
-        case sqlite_column_type(column_name)
-        when 'INT'
-          value.to_s
-        when 'TEXT'
-          "'#{value.to_s}'"
+        if value
+          case sqlite_column_type(column_name)
+          when 'INT'
+            value.to_s
+          when 'TEXT'
+            "'#{value.to_s}'"
+          when 'TINYINT'
+            (value ? 1 : 0).to_s
+          else
+            'NULL'
+          end
         else
           'NULL'
         end
@@ -303,16 +311,7 @@ module LiteOrm
           s.print(column_name)
           s.print('=')
 
-          if my_value
-            case column_attrs[:type]
-            when 'INT'
-              s.print(my_value.to_s)
-            when 'TEXT'
-              s.print("'#{my_value}'")
-            end
-          else
-            s.print('NULL')
-          end
+          s.print(self.class.convert_for_sqlite(column_name, my_value))
         end
       end.string
     end
@@ -335,21 +334,12 @@ module LiteOrm
 
       StringIO.new.tap do |s|
         s.print('(')
-        schema.each_with_index do |(column_name, column_attrs), index|
+        schema.keys.each_with_index do |column_name, index|
           my_value = send(column_name)
 
           s.print(',') unless index.zero?
 
-          if my_value
-            case column_attrs[:type]
-            when 'INT'
-              s.print(my_value.to_s)
-            when 'TEXT'
-              s.print("'#{my_value}'")
-            end
-          else
-            s.print('NULL')
-          end
+          s.print(self.class.convert_for_sqlite(column_name, my_value))
         end
         s.print(')')
       end.string
