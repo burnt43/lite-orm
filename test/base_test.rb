@@ -145,6 +145,69 @@ module LiteOrm
         refute(bar02.send(:exist_in_database?))
 
       end
+
+      def test_updating_record_with_save
+        LiteOrm::Testing::Foo.ensure_table_exists!
+
+        foo_01 = LiteOrm::Testing::Foo.new.tap do |f|
+          f.id = 60
+          f.name = 'Sixty'
+        end
+
+        foo_02 = LiteOrm::Testing::Foo.new.tap do |f|
+          f.id = 61
+          f.name = 'Sixty-One'
+        end
+
+        foo_01.save!
+        foo_02.save!
+
+        LiteOrm::Testing::Foo.find_by_id(60).tap do |f|
+          assert_equal(60, f.id)
+          assert_equal('Sixty', f.name)
+        end
+
+        LiteOrm::Testing::Foo.find_by_id(61).tap do |f|
+          assert_equal(61, f.id)
+          assert_equal('Sixty-One', f.name)
+        end
+
+        foo_02.name = 'DuppleRug'
+        foo_02.save!
+
+        LiteOrm::Testing::Foo.find_by_id(60).tap do |f|
+          assert_equal(60, f.id)
+          assert_equal('Sixty', f.name)
+        end
+
+        LiteOrm::Testing::Foo.find_by_id(61).tap do |f|
+          assert_equal(61, f.id)
+          assert_equal('DuppleRug', f.name)
+        end
+      end
+
+      def test_all
+        LiteOrm::Testing::Foo.ensure_table_exists!
+
+        foo_01 = LiteOrm::Testing::Foo.new.tap do |f|
+          f.id = 60
+          f.name = 'Sixty'
+        end
+
+        foo_02 = LiteOrm::Testing::Foo.new.tap do |f|
+          f.id = 61
+          f.name = 'Sixty-One'
+        end
+
+        foo_01.save!
+        foo_02.save!
+
+        LiteOrm::Testing::Foo.all.tap do |records|
+          assert_equal(2, records.size)
+          assert_equal(60, records[0].id)
+          assert_equal(61, records[1].id)
+        end
+      end
     end
   end
 end

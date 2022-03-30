@@ -171,6 +171,12 @@ module LiteOrm
         LiteOrm.client.execute("DELETE FROM #{table_name};")
       end
 
+      def all
+        LiteOrm.client.execute("SELECT * FROM #{table_name};").map do |query_result|
+          self.new(with_query_result: query_result)
+        end
+      end
+
       # TODO: Make this match method_missing.
       # def respond_to_missing(method_name, include_private)
       # end
@@ -215,7 +221,7 @@ module LiteOrm
     def save!
       if exist_in_database?
         LiteOrm.client.execute(
-          "UPDATE #{self.class.table_name} SET #{attributes_for_update_command};"
+          "UPDATE #{self.class.table_name} SET #{attributes_for_update_command} WHERE #{self.class.primary_key}=#{primary_key_value(as_sqlite: true)};"
         )
       else
         LiteOrm.client.execute(
